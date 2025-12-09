@@ -45,6 +45,16 @@
             50% { box-shadow: 0 0 40px var(--color-rust-light), inset 0 0 30px rgba(217, 119, 6, 0.2); }
         }
         
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .scan-indicator {
+            animation: pulse 0.6s ease-in-out;
+        }
+        
         .btn-primary {
             background: linear-gradient(135deg, var(--color-rust) 0%, var(--color-rust-light) 100%);
             color: white;
@@ -116,6 +126,38 @@
             background: #000;
             display: block;
         }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            margin-top: 16px;
+        }
+        
+        .focus-guides {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            top: 0;
+            left: 0;
+        }
+        
+        .focus-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--color-rust);
+            opacity: 0.6;
+        }
+        
+        .focus-corner.top-left { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+        .focus-corner.top-right { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+        .focus-corner.bottom-left { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+        .focus-corner.bottom-right { bottom: 20px; right: 20px; border-left: none; border-top: none; }
         
         .badge {
             display: inline-block;
@@ -191,6 +233,33 @@
             background: rgba(59, 130, 246, 0.15);
             color: #3b82f6;
             border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .stat-item {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #9ca3af;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        
+        .stat-value {
+            color: var(--color-rust);
+            font-weight: bold;
+            font-size: 14px;
         }
         
         .success-toast {
@@ -271,19 +340,67 @@
             <!-- Scanner View -->
             <section id="scannerView" style="display: none;" class="fade-in">
                 <div class="card">
-                    <h2 style="font-size: 20px; margin-bottom: 16px;">📷 Kamera-Scanner</h2>
+                    <h2 style="font-size: 20px; margin-bottom: 16px;">📷 Live-Scanner</h2>
+                    
+                    <!-- Quick Actions -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                         <button id="startCameraBtn" class="btn-primary" style="width: 100%; padding: 14px;">Kamera starten</button>
                         <button id="uploadBtn" class="btn-primary" style="width: 100%; padding: 14px;">📁 Datei hochladen</button>
                     </div>
+                    
+                    <!-- Scanner Status -->
+                    <div id="scannerStatus" style="display: none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span id="statusIcon" style="font-size: 16px;">📷</span>
+                            <span id="statusText" style="color: #9ca3af; font-size: 12px; font-weight: 600;">Kamera bereit</span>
+                            <label style="margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+                                <input type="checkbox" id="autoScanToggle" style="cursor: pointer; width: 16px; height: 16px;">
+                                <span>🤖 Auto-Scan</span>
+                            </label>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">📷 Gescannt</div>
+                                <div class="stat-value" id="scannedCount">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">✨ Erkannt</div>
+                                <div class="stat-value" id="detectedCount">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">🕊 Fehler</div>
+                                <div class="stat-value" id="errorCount">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Container with Focus Guides -->
                     <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                    <video id="videoElement" style="display: none; margin-bottom: 16px; margin-top: 16px;"></video>
+                    <div id="videoContainer" class="video-container" style="display: none;">
+                        <video id="videoElement" style="display: block; width: 100%; height: auto;"></video>
+                        <div class="focus-guides">
+                            <div class="focus-corner top-left"></div>
+                            <div class="focus-corner top-right"></div>
+                            <div class="focus-corner bottom-left"></div>
+                            <div class="focus-corner bottom-right"></div>
+                        </div>
+                    </div>
                     <canvas id="canvasElement" style="display: none;"></canvas>
+                    
+                    <!-- Camera Controls -->
                     <div id="cameraControls" style="display: none; gap: 12px; display: grid; grid-template-columns: 1fr 1fr;">
                         <button id="scanBtn" class="btn-primary">🔍 Jetzt scannen</button>
                         <button id="stopCameraBtn" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stoppen</button>
                     </div>
-                    <div id="scanStatus" style="margin-top: 16px; text-align: center; font-size: 14px; color: #9ca3af;"></div>
+                    
+                    <!-- Scan Result Display -->
+                    <div id="scanResult" style="display: none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-top: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span id="resultIcon" style="font-size: 20px;"></span>
+                            <span id="resultText" style="color: #d1d5db; font-weight: 600;"></span>
+                        </div>
+                        <p id="resultDetails" style="font-size: 12px; color: #9ca3af; margin: 0;"></p>
+                    </div>
                 </div>
             </section>
 
@@ -439,19 +556,25 @@
     <div id="successToast" style="display: none;" class="success-toast">✅ Einstellungen gespeichert!</div>
 
     <script>
-        // State Management
+        // Enhanced State Management
         let appState = {
             apiKey: localStorage.getItem('werkaholic_apiKey') || '',
             autoScan: localStorage.getItem('werkaholic_autoScan') === 'true',
             scanInterval: parseInt(localStorage.getItem('werkaholic_scanInterval') || '25'),
             history: JSON.parse(localStorage.getItem('werkaholic_history') || '[]'),
-            currentView: 'dashboard'
+            currentView: 'dashboard',
+            // Scanner stats
+            scannedCount: 0,
+            detectedCount: 0,
+            errorCount: 0,
+            lastScanTime: 0
         };
 
         let scanner = {
             isActive: false,
             stream: null,
-            videoElement: null
+            videoElement: null,
+            scanTimeout: null
         };
 
         // View Switching
@@ -497,36 +620,107 @@
             });
         }
 
-        // Camera Scanner
+        // Enhanced Camera Scanner with Auto-Scan
         document.getElementById('startCameraBtn')?.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
                 scanner.stream = stream;
                 scanner.videoElement = document.getElementById('videoElement');
                 scanner.videoElement.srcObject = stream;
-                scanner.videoElement.style.display = 'block';
-                scanner.isActive = true;
                 
+                // Show scanner UI
                 document.getElementById('startCameraBtn').style.display = 'none';
                 document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('videoContainer').style.display = 'block';
                 document.getElementById('cameraControls').style.display = 'grid';
-                document.getElementById('scanStatus').innerHTML = '✅ Kamera bereit';
+                document.getElementById('scannerStatus').style.display = 'block';
+                scanner.isActive = true;
+                
+                updateScannerStatus('📷 Kamera bereit');
+                
+                // Auto-scan if enabled
+                if (appState.autoScan) {
+                    startAutoScan();
+                }
             } catch (err) {
-                alert('⚠️ Kamerazugriff nicht möglich');
+                updateScannerStatus('⚠️ Kamera nicht verfügbar', true);
+                appState.errorCount++;
+                updateStats();
             }
         });
 
         document.getElementById('stopCameraBtn')?.addEventListener('click', () => {
+            stopScanning();
+        });
+
+        document.getElementById('autoScanToggle')?.addEventListener('change', (e) => {
+            if (e.target.checked && scanner.isActive) {
+                startAutoScan();
+            } else {
+                clearTimeout(scanner.scanTimeout);
+            }
+        });
+
+        function stopScanning() {
+            clearTimeout(scanner.scanTimeout);
             if (scanner.stream) {
                 scanner.stream.getTracks().forEach(track => track.stop());
                 scanner.isActive = false;
             }
-            scanner.videoElement.style.display = 'none';
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('scannerStatus').style.display = 'none';
             document.getElementById('startCameraBtn').style.display = 'block';
             document.getElementById('uploadBtn').style.display = 'block';
             document.getElementById('cameraControls').style.display = 'none';
-            document.getElementById('scanStatus').innerHTML = '';
-        });
+            document.getElementById('scanResult').style.display = 'none';
+        }
+
+        function startAutoScan() {
+            const interval = appState.scanInterval * 1000;
+            const performScan = async () => {
+                if (!scanner.isActive || !scanner.videoElement) return;
+                
+                try {
+                    const canvas = document.getElementById('canvasElement');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = scanner.videoElement.videoWidth;
+                    canvas.height = scanner.videoElement.videoHeight;
+                    ctx.drawImage(scanner.videoElement, 0, 0);
+                    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    appState.scannedCount++;
+                    updateStats();
+                    
+                    // Debounce: nur wenn genügend Zeit seit letztem Scan
+                    const now = Date.now();
+                    if (now - appState.lastScanTime >= 1500) {
+                        appState.lastScanTime = now;
+                        await analyzeImage(imageData);
+                        
+                        // Pulse-Animation
+                        document.getElementById('scanResult').classList.add('scan-indicator');
+                        setTimeout(() => {
+                            document.getElementById('scanResult').classList.remove('scan-indicator');
+                        }, 600);
+                    }
+                } catch (err) {
+                    appState.errorCount++;
+                    updateStats();
+                }
+                
+                if (scanner.isActive) {
+                    scanner.scanTimeout = setTimeout(performScan, interval);
+                }
+            };
+            
+            performScan();
+        }
 
         document.getElementById('uploadBtn')?.addEventListener('click', () => {
             document.getElementById('fileInput').click();
@@ -551,19 +745,23 @@
             canvas.width = scanner.videoElement.videoWidth;
             canvas.height = scanner.videoElement.videoHeight;
             ctx.drawImage(scanner.videoElement, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg');
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
             
+            appState.scannedCount++;
+            updateStats();
             analyzeImage(imageData);
         });
 
-        // AI Analysis
+        // AI Analysis with better error handling
         async function analyzeImage(imageBase64) {
             if (!appState.apiKey) {
-                alert('⚠️ Bitte API Key in Einstellungen eingeben');
+                updateScanResult('🔍 API Key erforderlich', 'Bitte API Key in den Einstellungen eingeben', false);
+                appState.errorCount++;
+                updateStats();
                 return;
             }
             
-            document.getElementById('scanStatus').innerHTML = '<div class="loading-spinner"></div><p style="margin-top: 12px; color: #9ca3af;">🤖 KI analysiert...</p>';
+            updateScanResult('🤖 Analysiere...', 'KI verarbeitet das Bild', null);
             
             try {
                 const imageData = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
@@ -589,6 +787,10 @@
                     }
                 );
                 
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 const text = data.candidates[0]?.content.parts[0]?.text || '';
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -604,19 +806,49 @@
                         };
                         
                         appState.history.push(item);
+                        appState.detectedCount++;
                         localStorage.setItem('werkaholic_history', JSON.stringify(appState.history));
                         
-                        showResultView(item);
-                        updateDashboard();
+                        updateStats();
                         
-                        document.getElementById('scanStatus').innerHTML = '✅ Analyse erfolgreich!';
+                        // Show result only if not in auto-scan
+                        if (!document.getElementById('autoScanToggle')?.checked) {
+                            showResultView(item);
+                        }
+                        
+                        updateScanResult('✅ Erfolgreich!', `📦 ${item.title} erkannt`, true);
                     } else {
-                        document.getElementById('scanStatus').innerHTML = '❌ Keine Objekte erkannt';
+                        updateScanResult('❌ Keine Objekte erkannt', 'Bild enthält kein erkennbares Produkt', false);
                     }
+                } else {
+                    throw new Error('Ungültiges Response Format');
                 }
             } catch (err) {
-                document.getElementById('scanStatus').innerHTML = '⚠️ Fehler: ' + err.message;
+                updateScanResult('⚠️ Fehler', err.message, false);
+                appState.errorCount++;
+                updateStats();
             }
+        }
+
+        function updateScanResult(title, details, success) {
+            const resultDiv = document.getElementById('scanResult');
+            const icon = success === true ? '✅' : success === false ? '❌' : '🔍';
+            
+            document.getElementById('resultIcon').textContent = icon;
+            document.getElementById('resultText').textContent = title;
+            document.getElementById('resultDetails').textContent = details;
+            resultDiv.style.display = 'block';
+        }
+
+        function updateScannerStatus(text, error = false) {
+            document.getElementById('statusText').textContent = text;
+            document.getElementById('statusIcon').textContent = error ? '⚠️' : '📷';
+        }
+
+        function updateStats() {
+            document.getElementById('scannedCount').textContent = appState.scannedCount;
+            document.getElementById('detectedCount').textContent = appState.detectedCount;
+            document.getElementById('errorCount').textContent = appState.errorCount;
         }
 
         // Result View
@@ -646,7 +878,7 @@
                         </div>
                     </div>
                     <button onclick="copyToClipboard('${item.title}\\n\\n${item.description}\\n\\nPreis: €${item.price_estimate}')" class="btn-primary" style="width: 100%; padding: 14px; margin-bottom: 8px;">📋 In Zwischenablage kopieren</button>
-                    <button onclick="switchView('dashboard')" class="btn-primary" style="width: 100%; padding: 14px; background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, transparent 100%); border: 2px solid rgba(217, 119, 6, 0.3);">← Zurück</button>
+                    <button onclick="switchView('scanner')" class="btn-primary" style="width: 100%; padding: 14px; background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, transparent 100%); border: 2px solid rgba(217, 119, 6, 0.3);">← Zurück zum Scanner</button>
                 </div>
             `;
         }
@@ -654,11 +886,11 @@
         function copyToClipboard(text) {
             const decodedText = text.replace(/\\n/g, '\n');
             navigator.clipboard.writeText(decodedText).then(() => {
-                alert('✅ Text in Zwischenablage kopiert!');
+                showSuccessToast('Text kopiert!');
             });
         }
 
-        // Settings - API Key Management
+        // Settings Management
         document.getElementById('toggleApiKey')?.addEventListener('click', function() {
             const input = document.getElementById('apiKeyInput');
             input.type = input.type === 'password' ? 'text' : 'password';
@@ -678,6 +910,9 @@
         document.getElementById('clearHistoryBtn')?.addEventListener('click', function() {
             if (confirm('Möchtest du wirklich alle Artikel und Bilder löschen? Dies kann nicht rückgängig gemacht werden.')) {
                 appState.history = [];
+                appState.scannedCount = 0;
+                appState.detectedCount = 0;
+                appState.errorCount = 0;
                 localStorage.removeItem('werkaholic_history');
                 updateDashboard();
                 showSuccessToast('Alle Daten gelöscht');
@@ -725,7 +960,6 @@
         function saveSettings() {
             const newApiKey = document.getElementById('apiKeyInput').value.trim();
             
-            // Validierung
             if (newApiKey && newApiKey.length < 10) {
                 alert('⚠️ API Key zu kurz! Bitte einen gültigen Key eingeben.');
                 return;
@@ -742,20 +976,9 @@
             updateApiKeyStatus();
             showSuccessToast('Einstellungen gespeichert!');
             
-            // Auto-redirect nach 1.5 Sekunden
             setTimeout(() => {
                 switchView('dashboard');
             }, 1500);
-        }
-
-        function resetSettings() {
-            if (confirm('Alle Einstellungen auf Standard zurücksetzen?')) {
-                document.getElementById('apiKeyInput').value = appState.apiKey || '';
-                document.getElementById('autoScanCheck').checked = false;
-                document.getElementById('scanIntervalSlider').value = 25;
-                document.getElementById('scanIntervalValue').textContent = '25';
-                showSuccessToast('Einstellungen zurückgesetzt');
-            }
         }
 
         // Dashboard
@@ -792,7 +1015,6 @@
                     </div>
                 `).join('');
                 
-                // Add click handlers
                 inventoryList.querySelectorAll('.card').forEach((card, idx) => {
                     card.data = appState.history[idx];
                 });
@@ -806,8 +1028,10 @@
             document.getElementById('autoScanCheck').checked = appState.autoScan;
             document.getElementById('scanIntervalSlider').value = appState.scanInterval;
             document.getElementById('scanIntervalValue').textContent = appState.scanInterval;
+            document.getElementById('autoScanToggle').checked = appState.autoScan;
             updateApiKeyStatus();
             updateDashboard();
+            updateStats();
         });
     </script>
 </body>
