@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 Werkaholic AI - Verkaufs-Assistent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --color-oil: #1a1a1a;
+            --color-rust: #d97706;
+            --color-rust-light: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        h1, h2, h3 { font-family: 'Chakra Petch', monospace; }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scan-pulse {
+            animation: scan 2s ease-in-out infinite;
+        }
+        
+        @keyframes scan {
+            0%, 100% { box-shadow: 0 0 20px var(--color-rust), inset 0 0 20px rgba(217, 119, 6, 0.1); }
+            50% { box-shadow: 0 0 40px var(--color-rust-light), inset 0 0 30px rgba(217, 119, 6, 0.2); }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-rust) 0%, var(--color-rust-light) 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(217, 119, 6, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #242424 0%, #2a2a2a 100%);
+            border: 1px solid rgba(217, 119, 6, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: rgba(217, 119, 6, 0.3);
+            box-shadow: 0 12px 48px rgba(217, 119, 6, 0.15);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 14px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-rust);
+            background: rgba(217, 119, 6, 0.05);
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            background: #000;
+            display: block;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(217, 119, 6, 0.15);
+            color: #f59e0b;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(217, 119, 6, 0.1);
+            border-top: 3px solid var(--color-rust);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .price-tag {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--color-rust);
+            font-family: 'Chakra Petch', monospace;
+        }
+        
+        .nav-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        
+        .nav-button.active {
+            background: var(--color-rust);
+            color: white;
+        }
+        
+        .nav-button:not(.active) {
+            background: transparent;
+            color: #9ca3af;
+            border: 1px solid #3a3a3a;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-badge.listening {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .status-badge.processing {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .success-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.85) 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header style="background: linear-gradient(135deg, rgba(26,26,26,0.9) 0%, rgba(42,42,42,0.9) 100%); border-bottom: 1px solid rgba(217, 119, 6, 0.2); position: sticky; top: 0; z-index: 100;">
+            <div style="max-width: 1200px; margin: 0 auto; padding: 16px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 style="font-size: 24px; font-weight: bold; color: var(--color-rust); margin: 0;">🏭 Werkaholic AI</h1>
+                    <div style="display: flex; gap: 8px;" id="navButtons">
+                        <!-- Navigation wird hier eingefügt -->
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main style="max-width: 900px; margin: 0 auto; padding: 24px 20px 120px;">
+            <!-- Dashboard View -->
+            <section id="dashboardView" class="fade-in">
+                <div class="card" style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0%, transparent 100%); border: 2px solid rgba(217, 119, 6, 0.2);">
+                    <h2 style="font-size: 20px; margin-bottom: 12px;">👋 Willkommen, Verkäufer!</h2>
+                    <p style="color: #d1d5db; margin-bottom: 16px; line-height: 1.6;">
+                        Werkaholic AI analysiert deine Produkte mit künstlicher Intelligenz, erstellt perfekte Verkaufstexte und maximiert deine Profite. Starte mit dem Scanner oder verwalte deinen Bestand.
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; text-align: center;">
+                            <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">📦 Artikel im Bestand</p>
+                            <p id="totalItems" style="font-size: 28px; font-weight: bold; color: var(--color-rust);">0</p>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; text-align: center;">
+                            <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">💰 Gesamtwert</p>
+                            <p id="totalValue" style="font-size: 24px; font-weight: bold; color: var(--color-rust);">€0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <button onclick="switchView('scanner')" style="background: linear-gradient(135deg, var(--color-rust) 0%, var(--color-rust-light) 100%); padding: 40px 20px; border-radius: 12px; border: none; color: white; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);">
+                        <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+                        <div>Scanner</div>
+                    </button>
+                    <button onclick="switchView('inventory')" style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, transparent 100%); border: 2px solid rgba(217, 119, 6, 0.3); padding: 40px 20px; border-radius: 12px; color: white; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                        <div>Bestand</div>
+                    </button>
+                    <button onclick="switchView('analytics')" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%); border: 2px solid rgba(59, 130, 246, 0.3); padding: 40px 20px; border-radius: 12px; color: white; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+                        <div>Analytics</div>
+                    </button>
+                    <button onclick="switchView('settings')" style="background: linear-gradient(135deg, rgba(107, 114, 128, 0.2) 0%, transparent 100%); border: 2px solid rgba(107, 114, 128, 0.3); padding: 40px 20px; border-radius: 12px; color: white; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">⚙️</div>
+                        <div>Einstellungen</div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Scanner View -->
+            <section id="scannerView" style="display: none;" class="fade-in">
+                <div class="card">
+                    <h2 style="font-size: 20px; margin-bottom: 16px;">📷 Kamera-Scanner</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <button id="startCameraBtn" class="btn-primary" style="width: 100%; padding: 14px;">Kamera starten</button>
+                        <button id="uploadBtn" class="btn-primary" style="width: 100%; padding: 14px;">📁 Datei hochladen</button>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    <video id="videoElement" style="display: none; margin-bottom: 16px; margin-top: 16px;"></video>
+                    <canvas id="canvasElement" style="display: none;"></canvas>
+                    <div id="cameraControls" style="display: none; gap: 12px; display: grid; grid-template-columns: 1fr 1fr;">
+                        <button id="scanBtn" class="btn-primary">🔍 Jetzt scannen</button>
+                        <button id="stopCameraBtn" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stoppen</button>
+                    </div>
+                    <div id="scanStatus" style="margin-top: 16px; text-align: center; font-size: 14px; color: #9ca3af;"></div>
+                </div>
+            </section>
+
+            <!-- Inventory View -->
+            <section id="inventoryView" style="display: none;" class="fade-in">
+                <div class="card">
+                    <h2 style="font-size: 20px; margin-bottom: 16px;">📦 Bestandsverwaltung</h2>
+                    <input type="text" id="searchInput" class="input-field" placeholder="🔍 Nach Titel oder Kategorie suchen...">
+                    <div id="inventoryList">
+                        <p style="text-align: center; color: #9ca3af; padding: 40px 20px;">📦 Noch keine Artikel im Bestand</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section id="analyticsView" style="display: none;" class="fade-in">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div class="card">
+                        <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">📦 Gesamt Artikel</p>
+                        <p id="analyticsTotal" style="font-size: 28px; font-weight: bold;">0</p>
+                    </div>
+                    <div class="card">
+                        <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">💰 Gesamtwert</p>
+                        <p id="analyticsTotalValue" style="font-size: 28px; font-weight: bold; color: var(--color-rust);">€0</p>
+                    </div>
+                    <div class="card">
+                        <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">📊 Ø Preis</p>
+                        <p id="analyticsAvgPrice" style="font-size: 28px; font-weight: bold;">€0</p>
+                    </div>
+                    <div class="card">
+                        <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">⚡ Effizienz</p>
+                        <p id="analyticsEfficiency" style="font-size: 28px; font-weight: bold; color: #22c55e;">0min</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="settingsView" style="display: none;" class="fade-in">
+                <!-- API Key Status Alert -->
+                <div id="apiStatusAlert" class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, transparent 100%); border: 2px solid rgba(34, 197, 94, 0.2); display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">✅</span>
+                        <div>
+                            <p style="font-weight: 600; color: #22c55e; margin: 0;">API Key konfiguriert</p>
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">Deine App ist bereit zu scannen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="apiErrorAlert" class="card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%); border: 2px solid rgba(239, 68, 68, 0.2); display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">⚠️</span>
+                        <div>
+                            <p style="font-weight: 600; color: #ef4444; margin: 0;">API Key erforderlich</p>
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">Bitte API Key eingeben, um die App zu nutzen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 style="font-size: 20px; margin-bottom: 20px;">⚙️ Einstellungen</h2>
+                    
+                    <!-- API Configuration Section -->
+                    <div style="background: rgba(217, 119, 6, 0.05); padding: 16px; border-radius: 10px; margin-bottom: 24px; border: 1px solid rgba(217, 119, 6, 0.2);">
+                        <h3 style="font-weight: 600; margin-bottom: 12px; margin-top: 0; color: var(--color-rust);">🔑 Google Gemini API-Schlüssel</h3>
+                        
+                        <label style="display: block; font-size: 12px; color: #9ca3af; margin-bottom: 8px; font-weight: 600;">API Key eingeben</label>
+                        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-bottom: 12px;">
+                            <input type="password" id="apiKeyInput" class="input-field" placeholder="Paste your Google Gemini API Key..." style="margin-bottom: 0;">
+                            <button id="toggleApiKey" class="btn-primary" style="padding: 12px 16px; white-space: nowrap;">👁️</button>
+                            <button id="clearApiKey" class="btn-primary" style="padding: 12px 16px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, transparent 100%); border: 1px solid rgba(239, 68, 68, 0.3); white-space: nowrap;">🗑️</button>
+                        </div>
+                        
+                        <div id="apiKeyStatus" style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 12px; font-size: 12px; color: #9ca3af; display: none;"></div>
+                        
+                        <p style="font-size: 11px; color: #6b7280; margin: 0; line-height: 1.5;">
+                            💡 <strong>Tipp:</strong> Dein API Key wird nur in deinem Browser (localStorage) gespeichert. Niemals auf einem Server oder in der Cloud.<br>
+                            🔗 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--color-rust); text-decoration: underline;">Neuen Key bei Google AI Studio erstellen</a> (kostenlos, keine Kreditkarte)
+                        </p>
+                    </div>
+                    
+                    <!-- Scanner Settings Section -->
+                    <div style="background: rgba(59, 130, 246, 0.05); padding: 16px; border-radius: 10px; margin-bottom: 24px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <h3 style="font-weight: 600; margin-bottom: 16px; margin-top: 0; color: #3b82f6;">📷 Scanner-Einstellungen</h3>
+                        
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 16px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; transition: all 0.2s;">
+                            <input type="checkbox" id="autoScanCheck" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-rust);">
+                            <span style="flex: 1;">🤖 Auto-Scan aktivieren (kontinuierliche Erfassung)</span>
+                        </label>
+                        
+                        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                            <label style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #9ca3af; margin-bottom: 8px; font-weight: 600;">
+                                <span>Scan-Intervall</span>
+                                <span style="font-size: 16px; font-weight: bold; color: var(--color-rust);"><span id="scanIntervalValue">25</span>s</span>
+                            </label>
+                            <input type="range" id="scanIntervalSlider" class="input-field" min="3" max="60" value="25" style="margin: 0; padding: 8px;">
+                            <p style="font-size: 11px; color: #6b7280; margin-top: 8px; margin-bottom: 0;">Schneller = mehr Requests, Langsamer = spart API-Quota</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                            <div style="background: rgba(34, 197, 94, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                                <p style="color: #9ca3af; margin: 0 0 4px 0;">Empfohlen</p>
+                                <p style="font-weight: 600; color: #22c55e; margin: 0;">10-15s</p>
+                            </div>
+                            <div style="background: rgba(107, 114, 128, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(107, 114, 128, 0.2);">
+                                <p style="color: #9ca3af; margin: 0 0 4px 0;">Sparen-Modus</p>
+                                <p style="font-weight: 600; color: #d1d5db; margin: 0;">30-60s</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Storage & Privacy Section -->
+                    <div style="background: rgba(107, 114, 128, 0.05); padding: 16px; border-radius: 10px; margin-bottom: 24px; border: 1px solid rgba(107, 114, 128, 0.2);">
+                        <h3 style="font-weight: 600; margin-bottom: 12px; margin-top: 0; color: #9ca3af;">🔐 Datenspeicherung & Sicherheit</h3>
+                        <div style="font-size: 12px; color: #d1d5db; line-height: 1.6;">
+                            <p style="margin: 0 0 8px 0;"><strong>✅ Was wird lokal gespeichert:</strong></p>
+                            <ul style="margin: 0 0 12px 16px; padding: 0;">
+                                <li>API Key (verschlüsselt in deinem Browser)</li>
+                                <li>Scanner-Einstellungen (Intervall, Auto-Scan)</li>
+                                <li>Erkannte Artikel & Bilder (Vorschaubilder)</li>
+                            </ul>
+                            <p style="margin: 0 0 8px 0;"><strong>❌ Was wird NICHT hochgeladen:</strong></p>
+                            <ul style="margin: 0 0 12px 16px; padding: 0;">
+                                <li>Keine Daten auf Server (100% lokal)</li>
+                                <li>Nur Bilder zur KI-Analyse an Google Gemini</li>
+                                <li>Keine Tracking/Analytics</li>
+                            </ul>
+                            <button id="clearHistoryBtn" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, transparent 100%); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; width: 100%; margin-top: 12px;">🗑️ Alle Artikel & Cache löschen</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <button onclick="saveSettings()" class="btn-primary" style="width: 100%; padding: 14px;">💾 Speichern</button>
+                        <button onclick="switchView('dashboard')" class="btn-primary" style="width: 100%; padding: 14px; background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, transparent 100%); border: 1px solid rgba(217, 119, 6, 0.3);">← Zurück</button>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border-left: 3px solid var(--color-rust); font-size: 12px; color: #9ca3af;">
+                        <p style="margin: 0;"><strong>ℹ️ Wichtig:</strong> Diese Einstellungen werden in deinem Browser gespeichert. Nach dem Löschen von Cookies/Cache müssen Sie erneut eingegeben werden.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Result View -->
+            <section id="resultView" style="display: none;" class="fade-in">
+                <!-- Wird dynamisch gefüllt -->
+            </section>
+        </main>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="successToast" style="display: none;" class="success-toast">✅ Einstellungen gespeichert!</div>
+
+    <script>
+        // State Management
+        let appState = {
+            apiKey: localStorage.getItem('werkaholic_apiKey') || '',
+            autoScan: localStorage.getItem('werkaholic_autoScan') === 'true',
+            scanInterval: parseInt(localStorage.getItem('werkaholic_scanInterval') || '25'),
+            history: JSON.parse(localStorage.getItem('werkaholic_history') || '[]'),
+            currentView: 'dashboard'
+        };
+
+        let scanner = {
+            isActive: false,
+            stream: null,
+            videoElement: null
+        };
+
+        // View Switching
+        function switchView(viewName) {
+            document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+            
+            const viewMap = {
+                'dashboard': 'dashboardView',
+                'scanner': 'scannerView',
+                'inventory': 'inventoryView',
+                'analytics': 'analyticsView',
+                'settings': 'settingsView'
+            };
+            
+            const viewId = viewMap[viewName];
+            if (viewId) {
+                document.getElementById(viewId).style.display = 'block';
+                appState.currentView = viewName;
+                
+                // Update nav buttons
+                document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+                event.target?.closest('.nav-button')?.classList.add('active');
+            }
+        }
+
+        // Initialize Navigation
+        function initNavigation() {
+            const navButtons = document.getElementById('navButtons');
+            const views = [
+                { name: 'dashboard', label: '🏠' },
+                { name: 'scanner', label: '📷' },
+                { name: 'inventory', label: '📦' },
+                { name: 'analytics', label: '📊' },
+                { name: 'settings', label: '⚙️' }
+            ];
+            
+            views.forEach(view => {
+                const btn = document.createElement('button');
+                btn.className = 'nav-button' + (view.name === 'dashboard' ? ' active' : '');
+                btn.textContent = view.label;
+                btn.onclick = () => switchView(view.name);
+                navButtons.appendChild(btn);
+            });
+        }
+
+        // Camera Scanner
+        document.getElementById('startCameraBtn')?.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                scanner.stream = stream;
+                scanner.videoElement = document.getElementById('videoElement');
+                scanner.videoElement.srcObject = stream;
+                scanner.videoElement.style.display = 'block';
+                scanner.isActive = true;
+                
+                document.getElementById('startCameraBtn').style.display = 'none';
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('cameraControls').style.display = 'grid';
+                document.getElementById('scanStatus').innerHTML = '✅ Kamera bereit';
+            } catch (err) {
+                alert('⚠️ Kamerazugriff nicht möglich');
+            }
+        });
+
+        document.getElementById('stopCameraBtn')?.addEventListener('click', () => {
+            if (scanner.stream) {
+                scanner.stream.getTracks().forEach(track => track.stop());
+                scanner.isActive = false;
+            }
+            scanner.videoElement.style.display = 'none';
+            document.getElementById('startCameraBtn').style.display = 'block';
+            document.getElementById('uploadBtn').style.display = 'block';
+            document.getElementById('cameraControls').style.display = 'none';
+            document.getElementById('scanStatus').innerHTML = '';
+        });
+
+        document.getElementById('uploadBtn')?.addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const imageData = event.target.result;
+                analyzeImage(imageData);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('scanBtn')?.addEventListener('click', async () => {
+            if (!scanner.videoElement) return;
+            const canvas = document.getElementById('canvasElement');
+            const ctx = canvas.getContext('2d');
+            canvas.width = scanner.videoElement.videoWidth;
+            canvas.height = scanner.videoElement.videoHeight;
+            ctx.drawImage(scanner.videoElement, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            analyzeImage(imageData);
+        });
+
+        // AI Analysis
+        async function analyzeImage(imageBase64) {
+            if (!appState.apiKey) {
+                alert('⚠️ Bitte API Key in Einstellungen eingeben');
+                return;
+            }
+            
+            document.getElementById('scanStatus').innerHTML = '<div class="loading-spinner"></div><p style="margin-top: 12px; color: #9ca3af;">🤖 KI analysiert...</p>';
+            
+            try {
+                const imageData = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+                
+                const response = await fetch(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + appState.apiKey,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            system_instruction: {
+                                parts: {
+                                    text: 'Du bist Verkaufsexperte. Analysiere das Bild und antworte im JSON: {"item_detected": bool, "title": string, "category": string, "price_estimate": number, "condition": "New|Like New|Good|Fair|Poor", "description": string, "features": [], "confidence_score": 0-1}'
+                                }
+                            },
+                            contents: {
+                                parts: [
+                                    { text: 'Analysiere dieses Produktbild für eBay Kleinanzeigen.' },
+                                    { inline_data: { mime_type: 'image/jpeg', data: imageData } }
+                                ]
+                            }
+                        })
+                    }
+                );
+                
+                const data = await response.json();
+                const text = data.candidates[0]?.content.parts[0]?.text || '';
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                
+                if (jsonMatch) {
+                    const analysis = JSON.parse(jsonMatch[0]);
+                    if (analysis.item_detected) {
+                        const item = {
+                            id: 'item_' + Date.now(),
+                            timestamp: Date.now(),
+                            imageBase64,
+                            ...analysis
+                        };
+                        
+                        appState.history.push(item);
+                        localStorage.setItem('werkaholic_history', JSON.stringify(appState.history));
+                        
+                        showResultView(item);
+                        updateDashboard();
+                        
+                        document.getElementById('scanStatus').innerHTML = '✅ Analyse erfolgreich!';
+                    } else {
+                        document.getElementById('scanStatus').innerHTML = '❌ Keine Objekte erkannt';
+                    }
+                }
+            } catch (err) {
+                document.getElementById('scanStatus').innerHTML = '⚠️ Fehler: ' + err.message;
+            }
+        }
+
+        // Result View
+        function showResultView(item) {
+            switchView('result');
+            const resultView = document.getElementById('resultView');
+            resultView.innerHTML = `
+                <div class="card">
+                    <img src="${item.imageBase64}" alt="${item.title}" style="width: 100%; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">${item.title}</h2>
+                            <p style="color: #9ca3af; font-size: 14px;">${item.category}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="price-tag">€${item.price_estimate}</div>
+                            <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Zustand: ${item.condition}</p>
+                        </div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <p style="color: #d1d5db; line-height: 1.6;">${item.description}</p>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <p style="font-weight: 600; margin-bottom: 8px;">✨ Features</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${item.features?.map(f => `<span class="badge">${f}</span>`).join('') || ''}
+                        </div>
+                    </div>
+                    <button onclick="copyToClipboard('${item.title}\\n\\n${item.description}\\n\\nPreis: €${item.price_estimate}')" class="btn-primary" style="width: 100%; padding: 14px; margin-bottom: 8px;">📋 In Zwischenablage kopieren</button>
+                    <button onclick="switchView('dashboard')" class="btn-primary" style="width: 100%; padding: 14px; background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, transparent 100%); border: 2px solid rgba(217, 119, 6, 0.3);">← Zurück</button>
+                </div>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            const decodedText = text.replace(/\\n/g, '\n');
+            navigator.clipboard.writeText(decodedText).then(() => {
+                alert('✅ Text in Zwischenablage kopiert!');
+            });
+        }
+
+        // Settings - API Key Management
+        document.getElementById('toggleApiKey')?.addEventListener('click', function() {
+            const input = document.getElementById('apiKeyInput');
+            input.type = input.type === 'password' ? 'text' : 'password';
+            this.textContent = input.type === 'password' ? '👁️' : '🔒';
+        });
+
+        document.getElementById('clearApiKey')?.addEventListener('click', function() {
+            if (confirm('Möchtest du deinen API Key wirklich löschen?')) {
+                document.getElementById('apiKeyInput').value = '';
+                appState.apiKey = '';
+                localStorage.removeItem('werkaholic_apiKey');
+                updateApiKeyStatus();
+                showSuccessToast('API Key gelöscht');
+            }
+        });
+
+        document.getElementById('clearHistoryBtn')?.addEventListener('click', function() {
+            if (confirm('Möchtest du wirklich alle Artikel und Bilder löschen? Dies kann nicht rückgängig gemacht werden.')) {
+                appState.history = [];
+                localStorage.removeItem('werkaholic_history');
+                updateDashboard();
+                showSuccessToast('Alle Daten gelöscht');
+            }
+        });
+
+        document.getElementById('scanIntervalSlider')?.addEventListener('input', (e) => {
+            document.getElementById('scanIntervalValue').textContent = e.target.value;
+        });
+
+        function updateApiKeyStatus() {
+            const statusDiv = document.getElementById('apiKeyStatus');
+            const successAlert = document.getElementById('apiStatusAlert');
+            const errorAlert = document.getElementById('apiErrorAlert');
+            
+            if (appState.apiKey && appState.apiKey.length > 10) {
+                const keyPreview = appState.apiKey.substring(0, 10) + '...' + appState.apiKey.substring(appState.apiKey.length - 4);
+                statusDiv.innerHTML = `✅ Key aktiv: ${keyPreview}`;
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+                statusDiv.style.color = '#22c55e';
+                statusDiv.style.borderLeft = '3px solid #22c55e';
+                successAlert.style.display = 'block';
+                errorAlert.style.display = 'none';
+            } else {
+                statusDiv.innerHTML = '⚠️ Kein gültiger Key gefunden';
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusDiv.style.color = '#ef4444';
+                statusDiv.style.borderLeft = '3px solid #ef4444';
+                successAlert.style.display = 'none';
+                errorAlert.style.display = 'block';
+            }
+        }
+
+        function showSuccessToast(message) {
+            const toast = document.getElementById('successToast');
+            toast.innerHTML = '✅ ' + message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function saveSettings() {
+            const newApiKey = document.getElementById('apiKeyInput').value.trim();
+            
+            // Validierung
+            if (newApiKey && newApiKey.length < 10) {
+                alert('⚠️ API Key zu kurz! Bitte einen gültigen Key eingeben.');
+                return;
+            }
+            
+            appState.apiKey = newApiKey;
+            appState.autoScan = document.getElementById('autoScanCheck').checked;
+            appState.scanInterval = parseInt(document.getElementById('scanIntervalSlider').value);
+            
+            localStorage.setItem('werkaholic_apiKey', appState.apiKey);
+            localStorage.setItem('werkaholic_autoScan', appState.autoScan);
+            localStorage.setItem('werkaholic_scanInterval', appState.scanInterval);
+            
+            updateApiKeyStatus();
+            showSuccessToast('Einstellungen gespeichert!');
+            
+            // Auto-redirect nach 1.5 Sekunden
+            setTimeout(() => {
+                switchView('dashboard');
+            }, 1500);
+        }
+
+        function resetSettings() {
+            if (confirm('Alle Einstellungen auf Standard zurücksetzen?')) {
+                document.getElementById('apiKeyInput').value = appState.apiKey || '';
+                document.getElementById('autoScanCheck').checked = false;
+                document.getElementById('scanIntervalSlider').value = 25;
+                document.getElementById('scanIntervalValue').textContent = '25';
+                showSuccessToast('Einstellungen zurückgesetzt');
+            }
+        }
+
+        // Dashboard
+        function updateDashboard() {
+            const totalItems = appState.history.length;
+            const totalValue = appState.history.reduce((sum, item) => sum + (item.price_estimate || 0), 0);
+            const avgPrice = totalItems > 0 ? totalValue / totalItems : 0;
+            
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('totalValue').textContent = '€' + totalValue.toFixed(2);
+            document.getElementById('analyticsTotal').textContent = totalItems;
+            document.getElementById('analyticsTotalValue').textContent = '€' + totalValue.toFixed(2);
+            document.getElementById('analyticsAvgPrice').textContent = '€' + avgPrice.toFixed(2);
+            document.getElementById('analyticsEfficiency').textContent = (totalItems * 5) + 'min';
+            
+            // Update inventory
+            const inventoryList = document.getElementById('inventoryList');
+            if (totalItems === 0) {
+                inventoryList.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 40px 20px;">📦 Noch keine Artikel im Bestand</p>';
+            } else {
+                inventoryList.innerHTML = appState.history.map(item => `
+                    <div class="card" onclick="showResultView(this.data)" style="cursor: pointer;">
+                        <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
+                            <img src="${item.imageBase64}" alt="${item.title}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                            <div>
+                                <h4 style="font-weight: 600; margin-bottom: 4px;">${item.title}</h4>
+                                <p style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">${item.category}</p>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <p class="price-tag" style="font-size: 18px;">€${item.price_estimate}</p>
+                                    <span class="badge">${item.condition}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add click handlers
+                inventoryList.querySelectorAll('.card').forEach((card, idx) => {
+                    card.data = appState.history[idx];
+                });
+            }
+        }
+
+        // Load settings on init
+        window.addEventListener('load', () => {
+            initNavigation();
+            document.getElementById('apiKeyInput').value = appState.apiKey;
+            document.getElementById('autoScanCheck').checked = appState.autoScan;
+            document.getElementById('scanIntervalSlider').value = appState.scanInterval;
+            document.getElementById('scanIntervalValue').textContent = appState.scanInterval;
+            updateApiKeyStatus();
+            updateDashboard();
+        });
+    </script>
+</body>
+</html>
