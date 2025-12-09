@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📷 Werkaholic AI - Live Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --color-oil: #0f0f0f;
+            --color-surface: #1a1a1a;
+            --color-rust: #d97706;
+            --color-rust-light: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, h4 { font-family: 'Chakra Petch', monospace; }
+        
+        .fade-in { animation: fadeIn 0.4s ease-in forwards; opacity: 0; }
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scan-pulse {
+            animation: scan 2s ease-in-out infinite;
+        }
+        
+        @keyframes scan {
+            0%, 100% { 
+                box-shadow: 
+                    0 0 20px var(--color-rust),
+                    inset 0 0 20px rgba(217, 119, 6, 0.1),
+                    0 0 0 2px rgba(217, 119, 6, 0.3);
+            }
+            50% { 
+                box-shadow: 
+                    0 0 40px var(--color-rust-light),
+                    inset 0 0 30px rgba(217, 119, 6, 0.2),
+                    0 0 0 4px rgba(217, 119, 6, 0.5);
+            }
+        }
+        
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--color-rust-light), transparent);
+            animation: scanLine 2s ease-in-out infinite;
+            z-index: 10;
+        }
+        
+        @keyframes scanLine {
+            0% { top: 0%; }
+            50% { top: 50%; }
+            100% { top: 100%; }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-rust) 0%, var(--color-rust-light) 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(217, 119, 6, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #242424 0%, #2a2a2a 100%);
+            border: 1px solid rgba(217, 119, 6, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+            margin-bottom: 16px;
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .scan-frame {
+            position: absolute;
+            border: 3px solid rgba(217, 119, 6, 0.5);
+            border-radius: 8px;
+            animation: framePulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes framePulse {
+            0%, 100% { border-color: rgba(217, 119, 6, 0.3); }
+            50% { border-color: rgba(217, 119, 6, 0.8); }
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(217, 119, 6, 0.1);
+            border-top: 3px solid var(--color-rust);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        .status-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .status-processing {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .status-warning {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 14px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-rust);
+            background: rgba(217, 119, 6, 0.05);
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(217, 119, 6, 0.15);
+            color: #f59e0b;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+        
+        .price-tag {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--color-rust);
+            font-family: 'Chakra Petch', monospace;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header style="background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(42,42,42,0.95) 100%); border-bottom: 2px solid rgba(217, 119, 6, 0.3); position: sticky; top: 0; z-index: 100;">
+            <div style="max-width: 1000px; margin: 0 auto; padding: 16px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 style="font-size: 24px; font-weight: bold; color: var(--color-rust);">🏭 Werkaholic AI Scanner</h1>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span id="statusIndicator" class="status-badge status-success">✅ Bereit</span>
+                        <button onclick="goHome()" style="background: rgba(217, 119, 6, 0.2); border: 1px solid rgba(217, 119, 6, 0.3); color: #f59e0b; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">← Home</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main style="max-width: 1000px; margin: 0 auto; padding: 24px 20px 40px;">
+            <!-- Scanner Section -->
+            <section id="scannerSection" class="fade-in">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="font-size: 20px; margin: 0;">📷 Live-Scanner</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="cameraSelect" class="input-field" style="width: 200px; margin: 0; padding: 8px;">
+                                <option>Kamera auswählen...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Container -->
+                    <div id="videoContainer" class="video-container" style="display: none; aspect-ratio: 16/9;">
+                        <video id="videoElement" autoplay playsinline></video>
+                        <div class="scanner-overlay">
+                            <div class="scan-line"></div>
+                            <div class="scan-frame" style="top: 25%; left: 15%; width: 70%; height: 50%; border: 3px solid rgba(217, 119, 6, 0.4);"></div>
+                        </div>
+                    </div>
+                    <canvas id="canvasElement" style="display: none;"></canvas>
+                    
+                    <!-- Controls -->
+                    <div class="grid-2">
+                        <button id="startCameraBtn" class="btn-primary">📷 Kamera starten</button>
+                        <button id="uploadBtn" class="btn-primary">📁 Bild hochladen</button>
+                        <button id="scanBtn" class="btn-primary" style="display: none; grid-column: 1;">🔍 Scannen</button>
+                        <button id="stopCameraBtn" class="btn-primary" style="display: none; grid-column: 2; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stoppen</button>
+                    </div>
+                    
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    
+                    <!-- Auto-Scan Toggle -->
+                    <div style="margin-top: 16px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="autoScanToggle" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-size: 14px;">🤖 Auto-Scan (alle <span id="scanIntervalDisplay">5</span>s)</span>
+                        </label>
+                        <input type="range" id="scanIntervalSlider" min="3" max="30" value="5" style="width: 100%; margin-top: 8px;">
+                    </div>
+                </div>
+                
+                <!-- Status & Log -->
+                <div class="card">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">📊 Status-Log</h3>
+                    <div id="statusLog" style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; height: 150px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #9ca3af;">
+                        <p>Willkommen! Starten Sie die Kamera...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultSection" style="display: none;" class="fade-in">
+                <!-- Wird dynamisch gefüllt -->
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // ==================== STATE ====================
+        const appState = {
+            apiKey: localStorage.getItem('werkaholic_apiKey') || '',
+            autoScan: false,
+            scanInterval: 5,
+            isScanning: false,
+            isCameraActive: false,
+            lastDetections: [],
+            history: JSON.parse(localStorage.getItem('werkaholic_history') || '[]')
+        };
+
+        const scanner = {
+            video: null,
+            canvas: null,
+            stream: null,
+            autoScanInterval: null
+        };
+
+        // ==================== LOGGING ====================
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('statusLog');
+            const timestamp = new Date().toLocaleTimeString('de-DE');
+            const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+            const colors = { info: '#9ca3af', success: '#22c55e', error: '#ef4444', warning: '#f59e0b' };
+            
+            const line = document.createElement('p');
+            line.style.color = colors[type];
+            line.textContent = `[${timestamp}] ${icons[type]} ${message}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info') {
+            const indicator = document.getElementById('statusIndicator');
+            const classes = { success: 'status-success', processing: 'status-processing', warning: 'status-warning' };
+            indicator.className = `status-badge ${classes[type] || 'status-success'}`;
+            indicator.textContent = message;
+        }
+
+        // ==================== CAMERA MANAGEMENT ====================
+        async function initCameraSelect() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(d => d.kind === 'videoinput');
+                const select = document.getElementById('cameraSelect');
+                
+                cameras.forEach((camera, idx) => {
+                    const option = document.createElement('option');
+                    option.value = camera.deviceId;
+                    option.textContent = camera.label || `Kamera ${idx + 1}`;
+                    select.appendChild(option);
+                });
+                
+                if (cameras.length > 0) {
+                    select.value = cameras[0].deviceId;
+                }
+            } catch (err) {
+                addLog('Kamera-Enumerierung fehlgeschlagen', 'error');
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const cameraId = document.getElementById('cameraSelect').value;
+                if (!cameraId || cameraId === '') {
+                    throw new Error('Keine Kamera ausgewählt');
+                }
+                
+                setStatus('🔄 Starte Kamera...', 'processing');
+                addLog('Kamera wird aktiviert...');
+                
+                const constraints = {
+                    video: {
+                        deviceId: { exact: cameraId },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'environment'
+                    },
+                    audio: false
+                };
+                
+                scanner.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                scanner.video = document.getElementById('videoElement');
+                scanner.canvas = document.getElementById('canvasElement');
+                
+                scanner.video.srcObject = scanner.stream;
+                
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('startCameraBtn').style.display = 'none';
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('scanBtn').style.display = 'block';
+                document.getElementById('stopCameraBtn').style.display = 'block';
+                document.getElementById('cameraSelect').disabled = true;
+                
+                appState.isCameraActive = true;
+                setStatus('✅ Kamera aktiv', 'success');
+                addLog('Kamera erfolgreich gestartet');
+                
+                // Auto-Scan starten wenn aktiviert
+                if (document.getElementById('autoScanToggle').checked) {
+                    startAutoScan();
+                }
+            } catch (err) {
+                setStatus('❌ Kamerafehler', 'warning');
+                addLog(`Fehler: ${err.message}`, 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (scanner.stream) {
+                scanner.stream.getTracks().forEach(track => track.stop());
+            }
+            
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('startCameraBtn').style.display = 'block';
+            document.getElementById('uploadBtn').style.display = 'block';
+            document.getElementById('scanBtn').style.display = 'none';
+            document.getElementById('stopCameraBtn').style.display = 'none';
+            document.getElementById('cameraSelect').disabled = false;
+            
+            appState.isCameraActive = false;
+            stopAutoScan();
+            setStatus('✅ Bereit', 'success');
+            addLog('Kamera gestoppt');
+        }
+
+        // ==================== SCANNING ====================
+        async function captureFrame() {
+            if (!scanner.video) return null;
+            
+            try {
+                const ctx = scanner.canvas.getContext('2d');
+                scanner.canvas.width = scanner.video.videoWidth;
+                scanner.canvas.height = scanner.video.videoHeight;
+                ctx.drawImage(scanner.video, 0, 0);
+                return scanner.canvas.toDataURL('image/jpeg', 0.8);
+            } catch (err) {
+                addLog('Frame-Erfassung fehlgeschlagen', 'error');
+                return null;
+            }
+        }
+
+        async function scanImage(imageBase64) {
+            if (appState.isScanning) return;
+            if (!appState.apiKey) {
+                setStatus('⚠️ API Key fehlt', 'warning');
+                addLog('Bitte API Key in Einstellungen eingeben', 'warning');
+                return;
+            }
+            
+            appState.isScanning = true;
+            setStatus('🤖 Analysiere...', 'processing');
+            addLog('KI-Analyse läuft...');
+            
+            try {
+                const imageData = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+                
+                const systemPrompt = `Du bist ein hochspezialisierter E-Commerce-Experte. Analysiere das Produktbild und generiere ein perfektes Verkaufsinserat im JSON-Format:
+{
+  "item_detected": boolean,
+  "title": "Prägnanter Titel max. 80 Zeichen",
+  "category": "Kategorie",
+  "price_estimate": number,
+  "price_range": { "min": number, "max": number },
+  "condition": "New|Like New|Good|Fair|Poor",
+  "description": "4-6 Sätze, verkaufsfördernd, detailliert",
+  "features": ["Feature1", "Feature2", "Feature3"],
+  "potential_issues": ["Problem1"],
+  "recommended_keywords": ["Keyword1", "Keyword2"],
+  "confidence_score": 0.85,
+  "market_demand": "high|medium|low",
+  "estimated_listing_time": "number in days"
+}`;
+
+                const response = await fetch(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + appState.apiKey,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            system_instruction: { parts: { text: systemPrompt } },
+                            contents: {
+                                parts: [
+                                    { text: 'Analysiere dieses Produktbild detailliert für eBay Kleinanzeigen.' },
+                                    { inline_data: { mime_type: 'image/jpeg', data: imageData } }
+                                ]
+                            }
+                        })
+                    }
+                );
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'API Error');
+                }
+                
+                const data = await response.json();
+                const text = data.candidates[0]?.content.parts[0]?.text || '';
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                
+                if (!jsonMatch) {
+                    throw new Error('Keine JSON-Antwort');
+                }
+                
+                const analysis = JSON.parse(jsonMatch[0]);
+                
+                if (!analysis.item_detected) {
+                    setStatus('❌ Kein Objekt erkannt', 'warning');
+                    addLog('Keine Objekte im Bild erkannt', 'warning');
+                    appState.isScanning = false;
+                    return;
+                }
+                
+                // Duplikat-Check
+                const isDuplicate = checkDuplicate(analysis);
+                if (isDuplicate) {
+                    setStatus('⚠️ Duplikat erkannt', 'warning');
+                    addLog('Artikel scheint bereits erfasst zu sein', 'warning');
+                    appState.isScanning = false;
+                    return;
+                }
+                
+                // Speichern
+                const item = {
+                    id: 'item_' + Date.now(),
+                    timestamp: Date.now(),
+                    imageBase64,
+                    ...analysis
+                };
+                
+                appState.history.push(item);
+                appState.lastDetections.push({ title: analysis.title, keywords: analysis.recommended_keywords });
+                localStorage.setItem('werkaholic_history', JSON.stringify(appState.history));
+                
+                setStatus('✅ Erfolgreich erkannt!', 'success');
+                addLog(`✅ Artikel erkannt: ${analysis.title}`);
+                showResultView(item);
+                
+            } catch (err) {
+                setStatus('❌ Fehler', 'warning');
+                addLog(`Fehler: ${err.message}`, 'error');
+            } finally {
+                appState.isScanning = false;
+            }
+        }
+
+        function checkDuplicate(analysis) {
+            if (appState.lastDetections.length === 0) return false;
+            
+            const recent = appState.lastDetections.slice(-3);
+            const newKeywords = new Set(analysis.recommended_keywords || []);
+            
+            return recent.some(prev => {
+                const titleMatch = prev.title.toLowerCase() === analysis.title.toLowerCase();
+                const keywordMatch = (prev.keywords || []).filter(k => newKeywords.has(k)).length >= 2;
+                return titleMatch || keywordMatch;
+            });
+        }
+
+        // ==================== AUTO-SCAN ====================
+        function startAutoScan() {
+            if (!appState.isCameraActive) return;
+            
+            addLog('🤖 Auto-Scan aktiviert');
+            scanner.autoScanInterval = setInterval(async () => {
+                if (appState.isCameraActive && !appState.isScanning) {
+                    const frame = await captureFrame();
+                    if (frame) await scanImage(frame);
+                }
+            }, appState.scanInterval * 1000);
+        }
+
+        function stopAutoScan() {
+            if (scanner.autoScanInterval) {
+                clearInterval(scanner.autoScanInterval);
+                addLog('Auto-Scan gestoppt');
+            }
+        }
+
+        // ==================== RESULT VIEW ====================
+        function showResultView(item) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.style.display = 'block';
+            resultSection.innerHTML = `
+                <div class="card fade-in">
+                    <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                        <img src="${item.imageBase64}" alt="${item.title}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;">
+                        <div style="flex: 1;">
+                            <h2 style="font-size: 22px; font-weight: bold; margin-bottom: 8px;">${item.title}</h2>
+                            <p style="color: #9ca3af; margin-bottom: 12px;">${item.category}</p>
+                            <div class="grid-3">
+                                <div style="text-align: center;">
+                                    <p style="font-size: 12px; color: #6b7280;">Preis</p>
+                                    <p class="price-tag" style="font-size: 24px;">€${item.price_estimate}</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <p style="font-size: 12px; color: #6b7280;">Zustand</p>
+                                    <p style="font-weight: 600;">${item.condition}</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <p style="font-size: 12px; color: #6b7280;">Vertrauen</p>
+                                    <p style="font-weight: 600; color: #22c55e;">${Math.round(item.confidence_score * 100)}%</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <h4 style="font-weight: 600; margin-bottom: 8px;">📝 Beschreibung</h4>
+                        <p style="color: #d1d5db; line-height: 1.6;">${item.description}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="font-weight: 600; margin-bottom: 8px;">✨ Highlights</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${item.features?.map(f => `<span class="badge">${f}</span>`).join('') || ''}
+                        </div>
+                    </div>
+                    
+                    ${item.potential_issues?.length ? `
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="font-weight: 600; margin-bottom: 8px; color: #ef4444;">⚠️ Potenzielle Mängel</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${item.potential_issues.map(i => `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">${i}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="font-weight: 600; margin-bottom: 8px;">🔍 SEO Keywords</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${item.recommended_keywords?.map(k => `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: rgba(59, 130, 246, 0.3);">${k}</span>`).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <button onclick="copyToClipboard('${item.title}\\n\\n${item.description}\\n\\nPreis: €${item.price_estimate}')" class="btn-primary">📋 Text kopieren</button>
+                        <button onclick="downloadJSON(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="btn-primary">💾 Als JSON</button>
+                        <button onclick="editListing(${item.id})" class="btn-primary">✏️ Bearbeiten</button>
+                        <button onclick="goHome()" class="btn-primary" style="background: rgba(217, 119, 6, 0.3); border: 1px solid rgba(217, 119, 6, 0.3);">← Weiter scannen</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            const decodedText = text.replace(/\\n/g, '\n');
+            navigator.clipboard.writeText(decodedText).then(() => {
+                addLog('✅ Text in Zwischenablage kopiert');
+            });
+        }
+
+        function downloadJSON(item) {
+            const json = JSON.stringify(item, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${item.title.replace(/\s+/g, '_')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function editListing(id) {
+            addLog('Bearbeitungsmodus für Artikel ' + id);
+            // TODO: Editor-Interface implementieren
+        }
+
+        function goHome() {
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('resultSection').innerHTML = '';
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('startCameraBtn').addEventListener('click', startCamera);
+        document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+        document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+        
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => scanImage(event.target.result);
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('scanBtn').addEventListener('click', async () => {
+            const frame = await captureFrame();
+            if (frame) await scanImage(frame);
+        });
+
+        document.getElementById('autoScanToggle').addEventListener('change', (e) => {
+            if (e.target.checked && appState.isCameraActive) {
+                startAutoScan();
+            } else {
+                stopAutoScan();
+            }
+        });
+
+        document.getElementById('scanIntervalSlider').addEventListener('input', (e) => {
+            appState.scanInterval = parseInt(e.target.value);
+            document.getElementById('scanIntervalDisplay').textContent = e.target.value;
+            if (scanner.autoScanInterval) {
+                stopAutoScan();
+                if (document.getElementById('autoScanToggle').checked) {
+                    startAutoScan();
+                }
+            }
+        });
+
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('load', async () => {
+            // API Key laden
+            appState.apiKey = localStorage.getItem('werkaholic_apiKey') || '';
+            if (!appState.apiKey) {
+                addLog('⚠️ API Key nicht konfiguriert - Bitte in Einstellungen eingeben', 'warning');
+            } else {
+                addLog('✅ API Key geladen');
+            }
+            
+            // Kameras laden
+            await initCameraSelect();
+            addLog('🔧 System initialisiert');
+        });
+    </script>
+</body>
+</html>
