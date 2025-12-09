@@ -235,6 +235,35 @@
             border: 1px solid rgba(59, 130, 246, 0.3);
         }
         
+        .error-alert {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            color: #ef4444;
+            font-size: 12px;
+        }
+        
+        .success-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.85) 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -260,25 +289,6 @@
             color: var(--color-rust);
             font-weight: bold;
             font-size: 14px;
-        }
-        
-        .success-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.85) 100%);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 10px;
-            box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
-            font-weight: 600;
-            animation: slideIn 0.3s ease-out;
-            z-index: 1000;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
@@ -342,14 +352,36 @@
                 <div class="card">
                     <h2 style="font-size: 20px; margin-bottom: 16px;">📷 Live-Scanner</h2>
                     
+                    <!-- Error Display -->
+                    <div id="cameraErrorDisplay" class="error-alert" style="display: none;"></div>
+                    
                     <!-- Quick Actions -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                         <button id="startCameraBtn" class="btn-primary" style="width: 100%; padding: 14px;">Kamera starten</button>
                         <button id="uploadBtn" class="btn-primary" style="width: 100%; padding: 14px;">📁 Datei hochladen</button>
                     </div>
                     
+                    <!-- Video Container -->
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    <div id="videoContainer" class="video-container" style="display: none;">
+                        <video id="videoElement" style="display: block; width: 100%; height: auto;" playsinline></video>
+                        <div class="focus-guides">
+                            <div class="focus-corner top-left"></div>
+                            <div class="focus-corner top-right"></div>
+                            <div class="focus-corner bottom-left"></div>
+                            <div class="focus-corner bottom-right"></div>
+                        </div>
+                    </div>
+                    <canvas id="canvasElement" style="display: none;"></canvas>
+                    
+                    <!-- Camera Controls -->
+                    <div id="cameraControls" style="display: none; gap: 12px; display: grid; grid-template-columns: 1fr 1fr;">
+                        <button id="scanBtn" class="btn-primary">🔍 Jetzt scannen</button>
+                        <button id="stopCameraBtn" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stoppen</button>
+                    </div>
+                    
                     <!-- Scanner Status -->
-                    <div id="scannerStatus" style="display: none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <div id="scannerStatus" style="display: none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-top: 16px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                             <span id="statusIcon" style="font-size: 16px;">📷</span>
                             <span id="statusText" style="color: #9ca3af; font-size: 12px; font-weight: 600;">Kamera bereit</span>
@@ -372,25 +404,6 @@
                                 <div class="stat-value" id="errorCount">0</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Video Container with Focus Guides -->
-                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                    <div id="videoContainer" class="video-container" style="display: none;">
-                        <video id="videoElement" style="display: block; width: 100%; height: auto;"></video>
-                        <div class="focus-guides">
-                            <div class="focus-corner top-left"></div>
-                            <div class="focus-corner top-right"></div>
-                            <div class="focus-corner bottom-left"></div>
-                            <div class="focus-corner bottom-right"></div>
-                        </div>
-                    </div>
-                    <canvas id="canvasElement" style="display: none;"></canvas>
-                    
-                    <!-- Camera Controls -->
-                    <div id="cameraControls" style="display: none; gap: 12px; display: grid; grid-template-columns: 1fr 1fr;">
-                        <button id="scanBtn" class="btn-primary">🔍 Jetzt scannen</button>
-                        <button id="stopCameraBtn" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stoppen</button>
                     </div>
                     
                     <!-- Scan Result Display -->
@@ -563,7 +576,6 @@
             scanInterval: parseInt(localStorage.getItem('werkaholic_scanInterval') || '25'),
             history: JSON.parse(localStorage.getItem('werkaholic_history') || '[]'),
             currentView: 'dashboard',
-            // Scanner stats
             scannedCount: 0,
             detectedCount: 0,
             errorCount: 0,
@@ -576,6 +588,23 @@
             videoElement: null,
             scanTimeout: null
         };
+
+        // Logging System
+        const log = {
+            info: (msg) => console.log('[INFO]', msg),
+            warn: (msg) => console.warn('[WARN]', msg),
+            error: (msg) => console.error('[ERROR]', msg),
+            debug: (msg) => console.debug('[DEBUG]', msg)
+        };
+
+        // Check HTTPS
+        function checkHttps() {
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                log.warn('🔐 Keine HTTPS! Kamera könnte blockiert sein.');
+                return false;
+            }
+            return true;
+        }
 
         // View Switching
         function switchView(viewName) {
@@ -593,8 +622,6 @@
             if (viewId) {
                 document.getElementById(viewId).style.display = 'block';
                 appState.currentView = viewName;
-                
-                // Update nav buttons
                 document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
                 event.target?.closest('.nav-button')?.classList.add('active');
             }
@@ -620,51 +647,94 @@
             });
         }
 
-        // Enhanced Camera Scanner with Auto-Scan
+        // Show Error
+        function showCameraError(message, details = '') {
+            log.error(message + ' - ' + details);
+            const errorDiv = document.getElementById('cameraErrorDisplay');
+            errorDiv.innerHTML = `🔴 <strong>${message}</strong><br><span style="font-size: 11px;">${details}</span>`;
+            errorDiv.style.display = 'block';
+            appState.errorCount++;
+            updateStats();
+        }
+
+        // Robust Camera Initialization
         document.getElementById('startCameraBtn')?.addEventListener('click', async () => {
+            log.info('📷 Starte Kamera...');
+            document.getElementById('cameraErrorDisplay').style.display = 'none';
+            
+            // Check browser support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showCameraError('퉪 Browser unterstützt Kamera nicht', 'getUserMedia nicht verfügbar');
+                return;
+            }
+
+            // Check HTTPS
+            if (!checkHttps()) {
+                showCameraError('🔐 HTTPS erforderlich', 'Kamera funktioniert nur über HTTPS (oder localhost)');
+                return;
+            }
+
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                log.info('Fordere Kamerazugriff an...');
+                const constraints = {
+                    video: {
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    } 
-                });
+                    },
+                    audio: false
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                log.info('✅ Kamera gewährt');
+
                 scanner.stream = stream;
                 scanner.videoElement = document.getElementById('videoElement');
                 scanner.videoElement.srcObject = stream;
-                
-                // Show scanner UI
+
+                // Ensure video plays
+                scanner.videoElement.onloadedmetadata = () => {
+                    scanner.videoElement.play().catch(err => {
+                        showCameraError('Kamera konnte nicht gestartet werden', 'Video.play() fehlgeschlagen');
+                    });
+                };
+
                 document.getElementById('startCameraBtn').style.display = 'none';
                 document.getElementById('uploadBtn').style.display = 'none';
                 document.getElementById('videoContainer').style.display = 'block';
                 document.getElementById('cameraControls').style.display = 'grid';
                 document.getElementById('scannerStatus').style.display = 'block';
                 scanner.isActive = true;
-                
-                updateScannerStatus('📷 Kamera bereit');
-                
-                // Auto-scan if enabled
-                if (appState.autoScan) {
-                    startAutoScan();
-                }
+
+                updateScannerStatus('📷 Kamera aktiv');
+                log.info('🌟 Kamera erfolgreich initialisiert');
             } catch (err) {
-                updateScannerStatus('⚠️ Kamera nicht verfügbar', true);
-                appState.errorCount++;
-                updateStats();
+                log.error('Kamerafehler: ' + err.name + ' - ' + err.message);
+                
+                let errorMsg = 'Kamerzugriff verweigert';
+                let errorDetails = '';
+
+                if (err.name === 'NotAllowedError') {
+                    errorMsg = '🛶 Berechtigung verweigert';
+                    errorDetails = 'Bitte Kamerazugriff in Browser-Einstellungen erlauben';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = '🔍 Keine Kamera gefunden';
+                    errorDetails = 'Stelle sicher, dass dein Gerät eine Kamera hat';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '🔓 Kamera wird bereits verwendet';
+                    errorDetails = 'Kamera ist von einer anderen App besetzt';
+                } else if (err.name === 'SecurityError') {
+                    errorMsg = '🔐 Sicherheitsfehler';
+                    errorDetails = 'HTTPS ist erforderlich oder Kamera ist blockiert';
+                }
+
+                showCameraError(errorMsg, errorDetails);
             }
         });
 
         document.getElementById('stopCameraBtn')?.addEventListener('click', () => {
             stopScanning();
-        });
-
-        document.getElementById('autoScanToggle')?.addEventListener('change', (e) => {
-            if (e.target.checked && scanner.isActive) {
-                startAutoScan();
-            } else {
-                clearTimeout(scanner.scanTimeout);
-            }
+            log.info('Kamera gestoppt');
         });
 
         function stopScanning() {
@@ -681,46 +751,38 @@
             document.getElementById('scanResult').style.display = 'none';
         }
 
-        function startAutoScan() {
-            const interval = appState.scanInterval * 1000;
-            const performScan = async () => {
-                if (!scanner.isActive || !scanner.videoElement) return;
-                
-                try {
-                    const canvas = document.getElementById('canvasElement');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = scanner.videoElement.videoWidth;
-                    canvas.height = scanner.videoElement.videoHeight;
-                    ctx.drawImage(scanner.videoElement, 0, 0);
-                    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    appState.scannedCount++;
-                    updateStats();
-                    
-                    // Debounce: nur wenn genügend Zeit seit letztem Scan
-                    const now = Date.now();
-                    if (now - appState.lastScanTime >= 1500) {
-                        appState.lastScanTime = now;
-                        await analyzeImage(imageData);
-                        
-                        // Pulse-Animation
-                        document.getElementById('scanResult').classList.add('scan-indicator');
-                        setTimeout(() => {
-                            document.getElementById('scanResult').classList.remove('scan-indicator');
-                        }, 600);
-                    }
-                } catch (err) {
-                    appState.errorCount++;
-                    updateStats();
-                }
-                
-                if (scanner.isActive) {
-                    scanner.scanTimeout = setTimeout(performScan, interval);
-                }
-            };
-            
-            performScan();
+        function updateScannerStatus(text) {
+            document.getElementById('statusText').textContent = text;
         }
+
+        function updateStats() {
+            document.getElementById('scannedCount').textContent = appState.scannedCount;
+            document.getElementById('detectedCount').textContent = appState.detectedCount;
+            document.getElementById('errorCount').textContent = appState.errorCount;
+        }
+
+        document.getElementById('scanBtn')?.addEventListener('click', async () => {
+            if (!scanner.videoElement) {
+                showCameraError('Video nicht verfügbar', 'Kamera nicht aktiv');
+                return;
+            }
+            
+            try {
+                const canvas = document.getElementById('canvasElement');
+                const ctx = canvas.getContext('2d');
+                canvas.width = scanner.videoElement.videoWidth;
+                canvas.height = scanner.videoElement.videoHeight;
+                ctx.drawImage(scanner.videoElement, 0, 0);
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                appState.scannedCount++;
+                updateStats();
+                analyzeImage(imageData);
+                log.info('📷 Scan durchgeführt');
+            } catch (err) {
+                showCameraError('Scan fehlgeschlagen', err.message);
+            }
+        });
 
         document.getElementById('uploadBtn')?.addEventListener('click', () => {
             document.getElementById('fileInput').click();
@@ -732,32 +794,16 @@
             
             const reader = new FileReader();
             reader.onload = (event) => {
-                const imageData = event.target.result;
-                analyzeImage(imageData);
+                analyzeImage(event.target.result);
+                appState.scannedCount++;
+                updateStats();
             };
             reader.readAsDataURL(file);
         });
 
-        document.getElementById('scanBtn')?.addEventListener('click', async () => {
-            if (!scanner.videoElement) return;
-            const canvas = document.getElementById('canvasElement');
-            const ctx = canvas.getContext('2d');
-            canvas.width = scanner.videoElement.videoWidth;
-            canvas.height = scanner.videoElement.videoHeight;
-            ctx.drawImage(scanner.videoElement, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-            
-            appState.scannedCount++;
-            updateStats();
-            analyzeImage(imageData);
-        });
-
-        // AI Analysis with better error handling
         async function analyzeImage(imageBase64) {
             if (!appState.apiKey) {
-                updateScanResult('🔍 API Key erforderlich', 'Bitte API Key in den Einstellungen eingeben', false);
-                appState.errorCount++;
-                updateStats();
+                showCameraError('🔍 API Key erforderlich', 'Bitte API Key in den Einstellungen eingeben');
                 return;
             }
             
@@ -808,25 +854,17 @@
                         appState.history.push(item);
                         appState.detectedCount++;
                         localStorage.setItem('werkaholic_history', JSON.stringify(appState.history));
-                        
                         updateStats();
                         
-                        // Show result only if not in auto-scan
-                        if (!document.getElementById('autoScanToggle')?.checked) {
-                            showResultView(item);
-                        }
-                        
                         updateScanResult('✅ Erfolgreich!', `📦 ${item.title} erkannt`, true);
+                        log.info('✅ Item erkannt: ' + item.title);
                     } else {
                         updateScanResult('❌ Keine Objekte erkannt', 'Bild enthält kein erkennbares Produkt', false);
                     }
-                } else {
-                    throw new Error('Ungültiges Response Format');
                 }
             } catch (err) {
                 updateScanResult('⚠️ Fehler', err.message, false);
-                appState.errorCount++;
-                updateStats();
+                log.error('Analyse-Fehler: ' + err.message);
             }
         }
 
@@ -838,17 +876,6 @@
             document.getElementById('resultText').textContent = title;
             document.getElementById('resultDetails').textContent = details;
             resultDiv.style.display = 'block';
-        }
-
-        function updateScannerStatus(text, error = false) {
-            document.getElementById('statusText').textContent = text;
-            document.getElementById('statusIcon').textContent = error ? '⚠️' : '📷';
-        }
-
-        function updateStats() {
-            document.getElementById('scannedCount').textContent = appState.scannedCount;
-            document.getElementById('detectedCount').textContent = appState.detectedCount;
-            document.getElementById('errorCount').textContent = appState.errorCount;
         }
 
         // Result View
@@ -890,7 +917,7 @@
             });
         }
 
-        // Settings Management
+        // Settings
         document.getElementById('toggleApiKey')?.addEventListener('click', function() {
             const input = document.getElementById('apiKeyInput');
             input.type = input.type === 'password' ? 'text' : 'password';
@@ -908,13 +935,14 @@
         });
 
         document.getElementById('clearHistoryBtn')?.addEventListener('click', function() {
-            if (confirm('Möchtest du wirklich alle Artikel und Bilder löschen? Dies kann nicht rückgängig gemacht werden.')) {
+            if (confirm('Möchtest du wirklich alle Artikel und Bilder löschen?')) {
                 appState.history = [];
                 appState.scannedCount = 0;
                 appState.detectedCount = 0;
                 appState.errorCount = 0;
                 localStorage.removeItem('werkaholic_history');
                 updateDashboard();
+                updateStats();
                 showSuccessToast('Alle Daten gelöscht');
             }
         });
@@ -952,16 +980,14 @@
             const toast = document.getElementById('successToast');
             toast.innerHTML = '✅ ' + message;
             toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
         }
 
         function saveSettings() {
             const newApiKey = document.getElementById('apiKeyInput').value.trim();
             
             if (newApiKey && newApiKey.length < 10) {
-                alert('⚠️ API Key zu kurz! Bitte einen gültigen Key eingeben.');
+                alert('⚠️ API Key zu kurz!');
                 return;
             }
             
@@ -976,9 +1002,7 @@
             updateApiKeyStatus();
             showSuccessToast('Einstellungen gespeichert!');
             
-            setTimeout(() => {
-                switchView('dashboard');
-            }, 1500);
+            setTimeout(() => { switchView('dashboard'); }, 1500);
         }
 
         // Dashboard
@@ -994,7 +1018,6 @@
             document.getElementById('analyticsAvgPrice').textContent = '€' + avgPrice.toFixed(2);
             document.getElementById('analyticsEfficiency').textContent = (totalItems * 5) + 'min';
             
-            // Update inventory
             const inventoryList = document.getElementById('inventoryList');
             if (totalItems === 0) {
                 inventoryList.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 40px 20px;">📦 Noch keine Artikel im Bestand</p>';
@@ -1021,8 +1044,12 @@
             }
         }
 
-        // Load settings on init
+        // Load on init
         window.addEventListener('load', () => {
+            log.info('🌟 App startet...');
+            log.info('Protocol:', location.protocol);
+            log.info('Hostname:', location.hostname);
+            
             initNavigation();
             document.getElementById('apiKeyInput').value = appState.apiKey;
             document.getElementById('autoScanCheck').checked = appState.autoScan;
@@ -1032,6 +1059,8 @@
             updateApiKeyStatus();
             updateDashboard();
             updateStats();
+            
+            log.info('✅ App bereit');
         });
     </script>
 </body>
